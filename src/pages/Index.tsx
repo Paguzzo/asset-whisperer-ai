@@ -1,36 +1,18 @@
 import { useAuth } from '@/hooks/use-auth';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Bell, Settings, BarChart3 } from 'lucide-react';
 import Header from '@/components/layout/Header';
+import HomePage from './HomePage';
 
 const Index = () => {
   const { user } = useAuth();
 
+  // Show homepage for non-authenticated users
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
-        <div className="text-center space-y-6 p-8">
-          <div className="flex items-center justify-center space-x-2 mb-8">
-            <TrendingUp className="h-12 w-12 text-primary" />
-            <h1 className="text-4xl font-bold">Asset Whisperer AI</h1>
-          </div>
-          <p className="text-xl text-muted-foreground max-w-2xl">
-            Monitore seus ativos financeiros com inteligência artificial. 
-            Receba alertas via WhatsApp e insights preditivos em tempo real.
-          </p>
-          <div className="space-x-4">
-            <Button asChild size="lg">
-              <Link to="/auth">Começar Agora</Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    return <HomePage />;
   }
-
+  // Authenticated user dashboard
   return (
     <div className="min-h-screen bg-background">
       <Header />
