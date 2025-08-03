@@ -20,7 +20,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={
+            <Route path="/" element={<Index />} />
+            <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Index />
               </ProtectedRoute>

@@ -60,7 +60,7 @@ const Auth = () => {
             title: "Login realizado com sucesso!",
             description: "Bem-vindo ao Asset Whisperer AI",
           });
-          navigate('/');
+          navigate('/dashboard');
         }
       }
     } catch (error) {
