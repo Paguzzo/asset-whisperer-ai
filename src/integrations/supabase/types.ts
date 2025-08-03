@@ -14,6 +14,145 @@ export type Database = {
   }
   public: {
     Tables: {
+      assets: {
+        Row: {
+          asset_type: string
+          created_at: string
+          exchange: string | null
+          id: string
+          is_active: boolean
+          name: string
+          symbol: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_type: string
+          created_at?: string
+          exchange?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          symbol: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_type?: string
+          created_at?: string
+          exchange?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          symbol?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      monitoring_configs: {
+        Row: {
+          asset_id: string
+          created_at: string
+          id: string
+          intervals: Json
+          is_active: boolean
+          pre_alert_percentage: number | null
+          stop_loss_price: number | null
+          take_profit_price: number | null
+          target_price: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          id?: string
+          intervals?: Json
+          is_active?: boolean
+          pre_alert_percentage?: number | null
+          stop_loss_price?: number | null
+          take_profit_price?: number | null
+          target_price?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          id?: string
+          intervals?: Json
+          is_active?: boolean
+          pre_alert_percentage?: number | null
+          stop_loss_price?: number | null
+          take_profit_price?: number | null
+          target_price?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_configs_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_data: {
+        Row: {
+          asset_id: string
+          change_24h: number | null
+          change_percent_24h: number | null
+          created_at: string
+          id: string
+          interval_type: string
+          market_cap: number | null
+          price: number
+          raw_data: Json | null
+          source: string
+          timestamp: string
+          volume: number | null
+        }
+        Insert: {
+          asset_id: string
+          change_24h?: number | null
+          change_percent_24h?: number | null
+          created_at?: string
+          id?: string
+          interval_type: string
+          market_cap?: number | null
+          price: number
+          raw_data?: Json | null
+          source: string
+          timestamp: string
+          volume?: number | null
+        }
+        Update: {
+          asset_id?: string
+          change_24h?: number | null
+          change_percent_24h?: number | null
+          created_at?: string
+          id?: string
+          interval_type?: string
+          market_cap?: number | null
+          price?: number
+          raw_data?: Json | null
+          source?: string
+          timestamp?: string
+          volume?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_data_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

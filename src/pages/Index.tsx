@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Bell, Settings, BarChart3 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import HomePage from './HomePage';
+import AssetsList from '@/components/assets/AssetsList';
 
 const Index = () => {
   const { user } = useAuth();
@@ -25,22 +26,27 @@ const Index = () => {
           </p>
         </div>
 
+        {/* Assets Management Section */}
+        <div className="mb-8">
+          <AssetsList />
+        </div>
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <BarChart3 className="h-5 w-5" />
-                <span>Ativos Monitorados</span>
+                <span>Coleta de Dados</span>
               </CardTitle>
               <CardDescription>
-                Configure os ativos que você deseja acompanhar
+                APIs integradas: Yahoo Finance, Brapi, Binance
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Badge variant="secondary">Em breve</Badge>
+                <Badge variant="default">Ativo</Badge>
                 <p className="text-sm text-muted-foreground">
-                  Adicione ações brasileiras, americanas e criptomoedas
+                  Dados coletados em intervalos de 15min, 4h e diário
                 </p>
               </div>
             </CardContent>
@@ -58,7 +64,7 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Badge variant="secondary">Em breve</Badge>
+                <Badge variant="secondary">Próximo</Badge>
                 <p className="text-sm text-muted-foreground">
                   Configure triggers de stop-loss e take-profit
                 </p>
@@ -78,7 +84,7 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Badge variant="secondary">Em breve</Badge>
+                <Badge variant="secondary">Em desenvolvimento</Badge>
                 <p className="text-sm text-muted-foreground">
                   Tendências e recomendações automáticas
                 </p>
