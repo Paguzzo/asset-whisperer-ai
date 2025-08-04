@@ -95,7 +95,7 @@ async function fetchBinanceData(symbol: string): Promise<PriceData | null> {
     ])
     
     if (!tickerResponse.ok || !statsResponse.ok) {
-      console.log(`Binance API error for ${symbol}`)
+      console.log(`Binance API error for ${symbol}: ticker=${tickerResponse.status}, stats=${statsResponse.status}`)
       return null
     }
     
@@ -118,6 +118,8 @@ async function fetchBinanceData(symbol: string): Promise<PriceData | null> {
 async function collectPriceData(asset: any, intervalType: string) {
   let priceData: PriceData | null = null
   
+  console.log(`Fetching data for ${asset.symbol} (${asset.asset_type})`)
+  
   // Choose API based on asset type
   switch (asset.asset_type) {
     case 'brazilian_stock':
@@ -131,7 +133,12 @@ async function collectPriceData(asset: any, intervalType: string) {
       break
   }
   
-  if (!priceData) return null
+  if (!priceData) {
+    console.log(`No price data obtained for ${asset.symbol}`)
+    return null
+  }
+  
+  console.log(`Price data for ${asset.symbol}: $${priceData.price}`)
   
   // Store in database
   const { error } = await supabase
@@ -155,6 +162,7 @@ async function collectPriceData(asset: any, intervalType: string) {
     return null
   }
   
+  console.log(`Successfully stored price data for ${asset.symbol}`)
   return priceData
 }
 
@@ -170,15 +178,11 @@ Deno.serve(async (req) => {
     
     console.log(`Starting market data collection for interval: ${intervalType}`)
     
-    // Get all active assets that are being monitored
+    // Get all active assets
     const { data: assets, error: assetsError } = await supabase
       .from('assets')
-      .select(`
-        *,
-        monitoring_configs (*)
-      `)
+      .select('*')
       .eq('is_active', true)
-      .not('monitoring_configs', 'is', null)
     
     if (assetsError) {
       console.error('Error fetching assets:', assetsError)
@@ -188,41 +192,39 @@ Deno.serve(async (req) => {
       )
     }
     
+    console.log(`Found ${assets?.length || 0} active assets`)
+    
     const results = []
+    let successCount = 0
     
     for (const asset of assets || []) {
-      // Check if this interval is configured for monitoring
-      const config = asset.monitoring_configs?.[0]
-      if (!config?.is_active) continue
+      console.log(`Processing asset: ${asset.symbol} (${asset.asset_type})`)
       
-      const intervals = config.intervals || ['daily']
-      if (!intervals.includes(intervalType)) continue
-      
-      console.log(`Collecting data for ${asset.symbol} (${asset.asset_type})`)
-      
-      const priceData = await collectPriceData(asset, intervalType)
-      
-      if (priceData) {
-        results.push({
-          asset: asset.symbol,
-          type: asset.asset_type,
-          price: priceData.price,
-          change_24h: priceData.change_24h,
-          change_percent_24h: priceData.change_percent_24h
-        })
+      try {
+        const priceData = await collectPriceData(asset, intervalType)
+        if (priceData) {
+          results.push({ asset: asset.symbol, success: true, price: priceData.price })
+          successCount++
+        } else {
+          results.push({ asset: asset.symbol, success: false, error: 'No data collected' })
+        }
+      } catch (error) {
+        console.error(`Error collecting data for ${asset.symbol}:`, error)
+        results.push({ asset: asset.symbol, success: false, error: error.message })
       }
       
       // Add delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 200))
+      await new Promise(resolve => setTimeout(resolve, 500))
     }
     
-    console.log(`Collected data for ${results.length} assets`)
+    console.log(`Collection completed. Successfully collected data for ${successCount} out of ${assets?.length || 0} assets`)
     
     return new Response(
       JSON.stringify({
         success: true,
         interval: intervalType,
-        collected: results.length,
+        collected: successCount,
+        total: assets?.length || 0,
         results
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
