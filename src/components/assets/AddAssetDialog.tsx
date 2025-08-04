@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,11 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Combobox } from '@/components/ui/combobox';
 import { Plus } from 'lucide-react';
 
 const AddAssetDialog = ({ onAssetAdded }: { onAssetAdded: () => void }) => {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [availableAssets, setAvailableAssets] = useState<{ symbol: string; name: string }[]>([]);
   const [formData, setFormData] = useState({
     symbol: '',
     name: '',
@@ -20,6 +22,29 @@ const AddAssetDialog = ({ onAssetAdded }: { onAssetAdded: () => void }) => {
   });
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Buscar ativos disponíveis quando o tipo mudar
+  useEffect(() => {
+    if (formData.asset_type) {
+      fetchAvailableAssets(formData.asset_type);
+    } else {
+      setAvailableAssets([]);
+    }
+  }, [formData.asset_type]);
+
+  const fetchAvailableAssets = async (assetType: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-available-assets', {
+        body: { type: assetType }
+      });
+
+      if (error) throw error;
+      setAvailableAssets(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar ativos:', error);
+      setAvailableAssets([]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,17 +131,33 @@ const AddAssetDialog = ({ onAssetAdded }: { onAssetAdded: () => void }) => {
 
           <div className="space-y-2">
             <Label htmlFor="symbol">Símbolo</Label>
-            <Input
-              id="symbol"
-              placeholder={
-                formData.asset_type === 'brazilian_stock' ? 'PETR4' :
-                formData.asset_type === 'us_stock' ? 'AAPL' :
-                formData.asset_type === 'crypto' ? 'BTC' : 'Ex: PETR4'
-              }
-              value={formData.symbol}
-              onChange={(e) => setFormData(prev => ({ ...prev, symbol: e.target.value }))}
-              required
-            />
+            {formData.asset_type ? (
+              <Combobox
+                options={availableAssets.map(asset => ({
+                  value: asset.symbol,
+                  label: `${asset.symbol} - ${asset.name}`
+                }))}
+                value={formData.symbol}
+                onValueChange={(value) => {
+                  const selectedAsset = availableAssets.find(asset => asset.symbol === value);
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    symbol: value,
+                    name: selectedAsset?.name || prev.name
+                  }));
+                }}
+                placeholder="Selecione um ativo..."
+                searchPlaceholder="Digite para buscar..."
+                emptyMessage="Nenhum ativo encontrado."
+              />
+            ) : (
+              <Input
+                id="symbol"
+                placeholder="Primeiro selecione o tipo de ativo"
+                disabled
+                required
+              />
+            )}
           </div>
 
           <div className="space-y-2">

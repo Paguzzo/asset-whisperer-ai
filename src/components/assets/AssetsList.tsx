@@ -88,25 +88,33 @@ const AssetsList = () => {
 
   const testDataCollection = async () => {
     try {
-      const response = await fetch(
-        `https://azitogggugktqavcnvbn.supabase.co/functions/v1/collect-market-data?interval=daily`
-      );
+      toast({
+        title: "Coletando dados...",
+        description: "Executando coleta de dados de mercado.",
+      });
+
+      const { data, error } = await supabase.functions.invoke('collect-market-data');
       
-      const result = await response.json();
-      
-      if (result.success) {
+      if (error) {
+        console.error('Erro na coleta:', error);
         toast({
-          title: "Coleta de dados executada!",
-          description: `Dados coletados para ${result.collected} ativos.`,
+          title: "Erro na coleta",
+          description: error.message || "Erro ao coletar dados",
+          variant: "destructive",
         });
-        fetchAssets();
       } else {
-        throw new Error(result.error || 'Erro na coleta');
+        toast({
+          title: "Coleta concluída!",
+          description: `Coletados dados para ${data?.collected || 0} ativos.`,
+        });
+        // Recarregar ativos após coleta
+        setTimeout(fetchAssets, 1000);
       }
     } catch (error: any) {
+      console.error('Erro na função de coleta:', error);
       toast({
-        title: "Erro na coleta de dados",
-        description: error.message,
+        title: "Erro",
+        description: "Falha ao executar coleta de dados",
         variant: "destructive",
       });
     }
@@ -231,11 +239,16 @@ const AssetsList = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-4">
+                    <div className="text-center py-4 space-y-3">
                       <Badge variant="outline">Aguardando dados</Badge>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Execute a coleta para ver os preços
-                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={testDataCollection}
+                        className="text-xs"
+                      >
+                        Coletar Preços Agora
+                      </Button>
                     </div>
                   )}
                 </CardContent>
