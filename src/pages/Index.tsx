@@ -5,6 +5,7 @@ import { TrendingUp, Bell, Settings, BarChart3 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import HomePage from './HomePage';
 import AssetsList from '@/components/assets/AssetsList';
+import { InsightsList } from '@/components/insights/InsightsList';
 
 const Index = () => {
   const { user } = useAuth();
@@ -29,6 +30,11 @@ const Index = () => {
         {/* Assets Management Section */}
         <div className="mb-8">
           <AssetsList />
+        </div>
+
+        {/* AI Insights Section */}
+        <div className="mb-8">
+          <InsightsList />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -84,9 +90,9 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Badge variant="secondary">Em desenvolvimento</Badge>
+                <Badge variant="default">Ativo</Badge>
                 <p className="text-sm text-muted-foreground">
-                  Tendências e recomendações automáticas
+                  Análises técnicas e recomendações geradas com OpenAI
                 </p>
               </div>
             </CardContent>

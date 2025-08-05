@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.get-available-assets]
 verify_jwt = false
+
+[functions.generate-ai-insights]
+verify_jwt = false
