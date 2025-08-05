@@ -21,12 +21,103 @@ interface PriceData {
   timestamp: string;
 }
 
+interface TechnicalIndicators {
+  sma9: number;
+  sma21: number;
+  sma50: number;
+  rsi: number;
+  signals: string[];
+  trend: string;
+}
+
 interface Asset {
   id: string;
   symbol: string;
   name: string;
   asset_type: string;
   user_id: string;
+}
+
+// Calculate Simple Moving Average
+function calculateSMA(prices: number[], period: number): number {
+  if (prices.length < period) return 0;
+  const sum = prices.slice(0, period).reduce((acc, price) => acc + price, 0);
+  return sum / period;
+}
+
+// Calculate RSI
+function calculateRSI(prices: number[], period: number = 14): number {
+  if (prices.length < period + 1) return 50; // neutral RSI if not enough data
+  
+  let gains = 0;
+  let losses = 0;
+  
+  // Calculate initial average gain and loss
+  for (let i = 1; i <= period; i++) {
+    const change = prices[i-1] - prices[i];
+    if (change > 0) gains += change;
+    else losses += Math.abs(change);
+  }
+  
+  const avgGain = gains / period;
+  const avgLoss = losses / period;
+  
+  if (avgLoss === 0) return 100;
+  
+  const rs = avgGain / avgLoss;
+  return 100 - (100 / (1 + rs));
+}
+
+// Calculate technical indicators
+function calculateTechnicalIndicators(priceData: PriceData[]): TechnicalIndicators {
+  const prices = priceData.map(p => p.price);
+  
+  const sma9 = calculateSMA(prices, 9);
+  const sma21 = calculateSMA(prices, 21);
+  const sma50 = calculateSMA(prices, 50);
+  const rsi = calculateRSI(prices);
+  
+  const signals: string[] = [];
+  const currentPrice = prices[0];
+  
+  // Detect moving average signals
+  if (sma9 > sma21 && sma21 > sma50) {
+    signals.push('Tendência de alta confirmada (MM9 > MM21 > MM50)');
+  } else if (sma9 < sma21 && sma21 < sma50) {
+    signals.push('Tendência de baixa confirmada (MM9 < MM21 < MM50)');
+  }
+  
+  // Price vs moving averages
+  if (currentPrice > sma9 && currentPrice > sma21) {
+    signals.push('Preço acima das médias de curto prazo');
+  } else if (currentPrice < sma9 && currentPrice < sma21) {
+    signals.push('Preço abaixo das médias de curto prazo');
+  }
+  
+  // RSI signals
+  if (rsi > 70) {
+    signals.push('RSI em zona de sobrecompra (>70)');
+  } else if (rsi < 30) {
+    signals.push('RSI em zona de sobrevenda (<30)');
+  } else if (rsi > 50) {
+    signals.push('RSI indica força compradora');
+  } else {
+    signals.push('RSI indica pressão vendedora');
+  }
+  
+  // Determine overall trend
+  let trend = 'Lateral';
+  if (sma9 > sma21 && currentPrice > sma21) trend = 'Alta';
+  else if (sma9 < sma21 && currentPrice < sma21) trend = 'Baixa';
+  
+  return {
+    sma9,
+    sma21,
+    sma50,
+    rsi,
+    signals,
+    trend
+  };
 }
 
 async function generateInsight(asset: Asset, priceData: PriceData[], userId: string) {
@@ -36,6 +127,9 @@ async function generateInsight(asset: Asset, priceData: PriceData[], userId: str
     throw new Error('OpenAI API key not configured');
   }
 
+  // Calculate technical indicators
+  const technicalIndicators = calculateTechnicalIndicators(priceData);
+  
   // Prepare market data context
   const latestPrice = priceData[0];
   const previousPrices = priceData.slice(1, 6); // Last 5 data points
@@ -47,25 +141,37 @@ async function generateInsight(asset: Asset, priceData: PriceData[], userId: str
   }));
 
   const prompt = `
-Analise os dados de mercado do ativo ${asset.symbol} (${asset.name}) e gere insights técnicos e de tendência.
+Analise os dados de mercado do ativo ${asset.symbol} (${asset.name}) e gere insights técnicos e de tendência baseados nos indicadores técnicos calculados.
 
-Dados atuais:
+DADOS ATUAIS:
 - Preço atual: $${latestPrice.price}
 - Variação 24h: ${latestPrice.change_percent_24h}%
 - Volume: ${latestPrice.volume || 'N/A'}
 - Tipo de ativo: ${asset.asset_type}
 
-Histórico recente (últimos 5 pontos):
+INDICADORES TÉCNICOS CALCULADOS:
+- Média Móvel 9 períodos (MM9): $${technicalIndicators.sma9.toFixed(4)}
+- Média Móvel 21 períodos (MM21): $${technicalIndicators.sma21.toFixed(4)}
+- Média Móvel 50 períodos (MM50): $${technicalIndicators.sma50.toFixed(4)}
+- RSI (14 períodos): ${technicalIndicators.rsi.toFixed(2)}
+- Tendência identificada: ${technicalIndicators.trend}
+
+SINAIS TÉCNICOS DETECTADOS:
+${technicalIndicators.signals.map(signal => `- ${signal}`).join('\n')}
+
+HISTÓRICO RECENTE (últimos 5 pontos):
 ${priceHistory.map(p => `- $${p.price} (${p.change}%) em ${new Date(p.timestamp).toLocaleDateString()}`).join('\n')}
 
-Por favor, forneça:
-1. Análise de tendência atual (alta, baixa, lateral)
-2. Níveis de suporte e resistência próximos
-3. Recomendação de ação (comprar, vender, aguardar)
-4. Fatores de risco a considerar
-5. Confiança na análise (1-10)
+Com base nos indicadores técnicos calculados e sinais detectados, forneça:
+1. Análise de tendência confirmada pelos indicadores (alta/baixa/lateral)
+2. Interpretação das médias móveis e seus cruzamentos
+3. Análise do RSI e condições de sobrecompra/sobrevenda
+4. Níveis de suporte/resistência baseados nas médias móveis
+5. Recomendação de ação (comprar, vender, aguardar) fundamentada nos indicadores
+6. Pontos de entrada/saída sugeridos
+7. Confiança na análise (1-10) baseada na convergência dos indicadores
 
-Responda em português brasileiro e seja conciso mas informativo. Foque em insights práticos para trading.
+Responda em português brasileiro, seja técnico mas acessível. Foque em insights práticos para trading baseados nos indicadores calculados.
 `;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -174,13 +280,13 @@ serve(async (req) => {
       );
     }
 
-    // Get recent price data for the asset
+    // Get recent price data for the asset (increased to 60 for better technical analysis)
     const { data: priceData, error: priceError } = await supabase
       .from('price_data')
       .select('*')
       .eq('asset_id', asset_id)
       .order('timestamp', { ascending: false })
-      .limit(10);
+      .limit(60);
 
     if (priceError || !priceData || priceData.length === 0) {
       console.error('Price data not found:', priceError);
