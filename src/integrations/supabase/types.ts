@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_insights: {
+        Row: {
+          asset_id: string
+          confidence_score: number | null
+          content: string
+          created_at: string
+          id: string
+          insight_type: string
+          metadata: Json | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_id: string
+          confidence_score?: number | null
+          content: string
+          created_at?: string
+          id?: string
+          insight_type: string
+          metadata?: Json | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_id?: string
+          confidence_score?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          insight_type?: string
+          metadata?: Json | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assets: {
         Row: {
           asset_type: string
