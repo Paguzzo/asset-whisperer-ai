@@ -21,10 +21,10 @@ interface Alert {
   is_active: boolean;
   is_triggered: boolean;
   triggered_at: string | null;
-  assets: {
+  assets?: {
     symbol: string;
     name: string;
-  };
+  } | null;
 }
 
 interface WhatsAppConfig {
@@ -45,20 +45,34 @@ const AlertsManager = () => {
   const { data: alerts, isLoading } = useQuery({
     queryKey: ['alerts', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get the alerts
+      const { data: alertsData, error: alertsError } = await supabase
         .from('price_alerts')
-        .select(`
-          *,
-          assets (
-            symbol,
-            name
-          )
-        `)
+        .select('*')
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data as Alert[];
+      if (alertsError) throw alertsError;
+
+      // Then get the assets data separately
+      const alertsWithAssets: Alert[] = [];
+      
+      if (alertsData) {
+        for (const alert of alertsData) {
+          const { data: assetData, error: assetError } = await supabase
+            .from('assets')
+            .select('symbol, name')
+            .eq('id', alert.asset_id)
+            .single();
+
+          alertsWithAssets.push({
+            ...alert,
+            assets: assetError ? null : assetData
+          });
+        }
+      }
+
+      return alertsWithAssets;
     },
     enabled: !!user?.id,
   });
@@ -71,7 +85,7 @@ const AlertsManager = () => {
         .from('whatsapp_configs')
         .select('*')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
       return data as WhatsAppConfig | null;
@@ -147,7 +161,7 @@ const AlertsManager = () => {
   };
 
   const getAlertTypeName = (type: string) => {
-    const names = {
+    const names: Record<string, string> = {
       price_target: 'Meta de Preço',
       stop_loss: 'Stop Loss',
       take_profit: 'Take Profit',
@@ -233,13 +247,15 @@ const AlertsManager = () => {
                     {getAlertTypeIcon(alert.alert_type)}
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{alert.assets.symbol}</h3>
+                        <h3 className="font-semibold">
+                          {alert.assets?.symbol || 'N/A'}
+                        </h3>
                         <Badge variant="outline">
                           {getAlertTypeName(alert.alert_type)}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {alert.assets.name}
+                        {alert.assets?.name || 'Asset não encontrado'}
                       </p>
                     </div>
                   </div>
