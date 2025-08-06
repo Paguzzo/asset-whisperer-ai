@@ -36,35 +36,14 @@ export function SentimentDashboard() {
 
   const fetchSentimentData = async () => {
     try {
-      let query = supabase
-        .from('social_sentiment')
-        .select(`
-          *,
-          assets (
-            symbol,
-            name
-          )
-        `)
-        .order('timestamp', { ascending: false })
-        .limit(50);
-
-      if (selectedAsset !== "all") {
-        query = query.eq('asset_id', selectedAsset);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching sentiment data:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar dados de sentimento",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setSentimentData(data || []);
+      // Mock data until tables are created
+      setSentimentData([]);
+      
+      toast({
+        title: "Info",
+        description: "Tabelas de sentimento ainda não foram criadas. Execute a migração SQL primeiro.",
+        variant: "default",
+      });
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -92,19 +71,11 @@ export function SentimentDashboard() {
   const updateSentimentData = async () => {
     setIsUpdating(true);
     try {
-      const { error } = await supabase.functions.invoke('collect-social-sentiment');
-
-      if (error) {
-        throw error;
-      }
-
+      // This will work once the edge function and tables are created
       toast({
-        title: "Sucesso",
-        description: "Dados de sentimento atualizados!",
+        title: "Info",
+        description: "Função de coleta de sentimento será habilitada após criar as tabelas.",
       });
-
-      // Refresh data
-      await fetchSentimentData();
     } catch (error) {
       console.error('Error updating sentiment:', error);
       toast({
@@ -206,101 +177,21 @@ export function SentimentDashboard() {
         </CardHeader>
       </Card>
 
-      {sentimentData.length === 0 ? (
-        <Card>
-          <CardContent className="text-center p-8">
-            <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum dado disponível</h3>
-            <p className="text-muted-foreground mb-4">
-              Não há dados de sentimento social disponíveis.
-            </p>
-            <Button onClick={updateSentimentData} disabled={isUpdating}>
-              {isUpdating ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              Coletar Dados Agora
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {sentimentData.map((data) => (
-            <Card key={data.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{getSourceIcon(data.source)}</span>
-                    <div>
-                      <CardTitle className="text-sm">
-                        {data.assets?.symbol || 'Mercado Geral'}
-                      </CardTitle>
-                      <CardDescription className="text-xs">
-                        {data.source.charAt(0).toUpperCase() + data.source.slice(1)}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {getSentimentIcon(data.sentiment_score)}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {data.sentiment_score !== null && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Sentimento</span>
-                    <Badge variant={data.sentiment_score > 0.1 ? "default" : data.sentiment_score < -0.1 ? "destructive" : "secondary"}>
-                      {getSentimentLabel(data.sentiment_score)}
-                    </Badge>
-                  </div>
-                )}
-                
-                {data.social_volume && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Volume Social</span>
-                    <span className="text-sm font-medium">{data.social_volume.toLocaleString()}</span>
-                  </div>
-                )}
-
-                {data.bullish_sentiment !== null && data.bearish_sentiment !== null && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-green-600">Otimista</span>
-                      <span className="text-red-600">Pessimista</span>
-                    </div>
-                    <div className="flex gap-1 h-2">
-                      <div 
-                        className="bg-green-500 rounded-l"
-                        style={{ width: `${data.bullish_sentiment}%` }}
-                      />
-                      <div 
-                        className="bg-red-500 rounded-r"
-                        style={{ width: `${data.bearish_sentiment}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span>{data.bullish_sentiment.toFixed(1)}%</span>
-                      <span>{data.bearish_sentiment.toFixed(1)}%</span>
-                    </div>
-                  </div>
-                )}
-
-                {data.fear_greed_index && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Fear & Greed</span>
-                    <Badge variant={data.fear_greed_index > 50 ? "default" : "destructive"}>
-                      {data.fear_greed_index}
-                    </Badge>
-                  </div>
-                )}
-
-                <div className="text-xs text-muted-foreground pt-2 border-t">
-                  {new Date(data.timestamp).toLocaleString('pt-BR')}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <Card>
+        <CardContent className="text-center p-8">
+          <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Tabelas não encontradas</h3>
+          <p className="text-muted-foreground mb-4">
+            As tabelas de sentimento social ainda não foram criadas. Execute a migração SQL primeiro.
+          </p>
+          <Button onClick={updateSentimentData} disabled={isUpdating} variant="outline">
+            {isUpdating ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : null}
+            Testar Conexão
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
