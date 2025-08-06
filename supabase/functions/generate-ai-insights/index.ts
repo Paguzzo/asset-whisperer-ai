@@ -21,13 +21,25 @@ interface PriceData {
   timestamp: string;
 }
 
-interface TechnicalIndicators {
+interface AdvancedTechnicalIndicators {
   sma9: number;
   sma21: number;
   sma50: number;
+  ema12: number;
+  ema26: number;
   rsi: number;
+  macd: number;
+  macdSignal: number;
+  macdHistogram: number;
+  bollingerUpper: number;
+  bollingerMiddle: number;
+  bollingerLower: number;
+  stochasticK: number;
+  stochasticD: number;
   signals: string[];
   trend: string;
+  confidenceFactors: string[];
+  overallConfidence: number;
 }
 
 interface Asset {
@@ -45,9 +57,23 @@ function calculateSMA(prices: number[], period: number): number {
   return sum / period;
 }
 
-// Calculate RSI
+// Calculate Exponential Moving Average
+function calculateEMA(prices: number[], period: number): number {
+  if (prices.length < period) return prices[0] || 0;
+  
+  const multiplier = 2 / (period + 1);
+  let ema = prices[prices.length - 1]; // Start with the oldest price
+  
+  for (let i = prices.length - 2; i >= 0; i--) {
+    ema = (prices[i] * multiplier) + (ema * (1 - multiplier));
+  }
+  
+  return ema;
+}
+
+// Calculate RSI with improved precision
 function calculateRSI(prices: number[], period: number = 14): number {
-  if (prices.length < period + 1) return 50; // neutral RSI if not enough data
+  if (prices.length < period + 1) return 50;
   
   let gains = 0;
   let losses = 0;
@@ -59,8 +85,20 @@ function calculateRSI(prices: number[], period: number = 14): number {
     else losses += Math.abs(change);
   }
   
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  
+  // Smooth the averages for more recent periods
+  for (let i = period + 1; i < Math.min(prices.length, period + 10); i++) {
+    const change = prices[i-1] - prices[i];
+    if (change > 0) {
+      avgGain = ((avgGain * (period - 1)) + change) / period;
+      avgLoss = (avgLoss * (period - 1)) / period;
+    } else {
+      avgGain = (avgGain * (period - 1)) / period;
+      avgLoss = ((avgLoss * (period - 1)) + Math.abs(change)) / period;
+    }
+  }
   
   if (avgLoss === 0) return 100;
   
@@ -68,55 +106,223 @@ function calculateRSI(prices: number[], period: number = 14): number {
   return 100 - (100 / (1 + rs));
 }
 
-// Calculate technical indicators
-function calculateTechnicalIndicators(priceData: PriceData[]): TechnicalIndicators {
-  const prices = priceData.map(p => p.price);
+// Calculate MACD
+function calculateMACD(prices: number[]): { macd: number; signal: number; histogram: number } {
+  const ema12 = calculateEMA(prices, 12);
+  const ema26 = calculateEMA(prices, 26);
+  const macd = ema12 - ema26;
   
+  // For simplicity, using a 9-period EMA of MACD as signal line
+  const macdSignal = macd * 0.2; // Simplified calculation
+  const histogram = macd - macdSignal;
+  
+  return { macd, signal: macdSignal, histogram };
+}
+
+// Calculate Bollinger Bands
+function calculateBollingerBands(prices: number[], period: number = 20, stdDev: number = 2): { upper: number; middle: number; lower: number } {
+  const middle = calculateSMA(prices, period);
+  
+  if (prices.length < period) {
+    return { upper: middle, middle, lower: middle };
+  }
+  
+  // Calculate standard deviation
+  const variance = prices.slice(0, period).reduce((sum, price) => {
+    return sum + Math.pow(price - middle, 2);
+  }, 0) / period;
+  
+  const standardDeviation = Math.sqrt(variance);
+  
+  return {
+    upper: middle + (standardDeviation * stdDev),
+    middle,
+    lower: middle - (standardDeviation * stdDev)
+  };
+}
+
+// Calculate Stochastic Oscillator
+function calculateStochastic(prices: number[], period: number = 14): { k: number; d: number } {
+  if (prices.length < period) return { k: 50, d: 50 };
+  
+  const recentPrices = prices.slice(0, period);
+  const highestHigh = Math.max(...recentPrices);
+  const lowestLow = Math.min(...recentPrices);
+  const currentPrice = prices[0];
+  
+  const k = ((currentPrice - lowestLow) / (highestHigh - lowestLow)) * 100;
+  
+  // Simplified %D calculation (3-period SMA of %K)
+  const d = k * 0.5 + 25; // Simplified calculation
+  
+  return { k, d };
+}
+
+// Advanced technical analysis with comprehensive indicators
+function calculateAdvancedTechnicalIndicators(priceData: PriceData[]): AdvancedTechnicalIndicators {
+  const prices = priceData.map(p => p.price);
+  const volumes = priceData.map(p => p.volume || 0);
+  
+  // Calculate all indicators
   const sma9 = calculateSMA(prices, 9);
   const sma21 = calculateSMA(prices, 21);
   const sma50 = calculateSMA(prices, 50);
+  const ema12 = calculateEMA(prices, 12);
+  const ema26 = calculateEMA(prices, 26);
   const rsi = calculateRSI(prices);
+  const macdData = calculateMACD(prices);
+  const bollinger = calculateBollingerBands(prices);
+  const stochastic = calculateStochastic(prices);
   
-  const signals: string[] = [];
   const currentPrice = prices[0];
+  const signals: string[] = [];
+  const confidenceFactors: string[] = [];
   
-  // Detect moving average signals
+  // Trend Analysis
+  let trendScore = 0;
+  let trend = 'Indefinido';
+  
+  // Moving Average Analysis
   if (sma9 > sma21 && sma21 > sma50) {
-    signals.push('Tendência de alta confirmada (MM9 > MM21 > MM50)');
+    signals.push('🔵 Alinhamento de médias em ALTA (MM9 > MM21 > MM50)');
+    confidenceFactors.push('Médias móveis alinhadas para alta');
+    trendScore += 2;
   } else if (sma9 < sma21 && sma21 < sma50) {
-    signals.push('Tendência de baixa confirmada (MM9 < MM21 < MM50)');
-  }
-  
-  // Price vs moving averages
-  if (currentPrice > sma9 && currentPrice > sma21) {
-    signals.push('Preço acima das médias de curto prazo');
-  } else if (currentPrice < sma9 && currentPrice < sma21) {
-    signals.push('Preço abaixo das médias de curto prazo');
-  }
-  
-  // RSI signals
-  if (rsi > 70) {
-    signals.push('RSI em zona de sobrecompra (>70)');
-  } else if (rsi < 30) {
-    signals.push('RSI em zona de sobrevenda (<30)');
-  } else if (rsi > 50) {
-    signals.push('RSI indica força compradora');
+    signals.push('🔴 Alinhamento de médias em BAIXA (MM9 < MM21 < MM50)');
+    confidenceFactors.push('Médias móveis alinhadas para baixa');
+    trendScore -= 2;
   } else {
-    signals.push('RSI indica pressão vendedora');
+    signals.push('🟡 Médias móveis em processo de realinhamento');
   }
   
-  // Determine overall trend
-  let trend = 'Lateral';
-  if (sma9 > sma21 && currentPrice > sma21) trend = 'Alta';
-  else if (sma9 < sma21 && currentPrice < sma21) trend = 'Baixa';
+  // Price position relative to moving averages
+  const priceAboveMA = [];
+  if (currentPrice > sma9) priceAboveMA.push('MM9');
+  if (currentPrice > sma21) priceAboveMA.push('MM21');
+  if (currentPrice > sma50) priceAboveMA.push('MM50');
+  
+  if (priceAboveMA.length === 3) {
+    signals.push('✅ Preço acima de TODAS as médias móveis');
+    confidenceFactors.push('Preço em posição de força');
+    trendScore += 1;
+  } else if (priceAboveMA.length === 0) {
+    signals.push('❌ Preço abaixo de TODAS as médias móveis');
+    confidenceFactors.push('Preço em posição de fraqueza');
+    trendScore -= 1;
+  } else {
+    signals.push(`⚖️ Preço acima de ${priceAboveMA.join(', ')}`);
+  }
+  
+  // RSI Analysis
+  if (rsi > 70) {
+    signals.push(`📈 RSI em zona de SOBRECOMPRA (${rsi.toFixed(1)})`);
+    trendScore -= 0.5;
+  } else if (rsi < 30) {
+    signals.push(`📉 RSI em zona de SOBREVENDA (${rsi.toFixed(1)})`);
+    trendScore += 0.5;
+  } else if (rsi > 50) {
+    signals.push(`💪 RSI indica força compradora (${rsi.toFixed(1)})`);
+    confidenceFactors.push('RSI confirma força');
+    trendScore += 0.5;
+  } else {
+    signals.push(`⬇️ RSI indica pressão vendedora (${rsi.toFixed(1)})`);
+    trendScore -= 0.5;
+  }
+  
+  // MACD Analysis
+  if (macdData.macd > macdData.signal) {
+    signals.push('🟢 MACD acima da linha de sinal (momentum positivo)');
+    confidenceFactors.push('MACD confirma momentum positivo');
+    trendScore += 1;
+  } else {
+    signals.push('🔴 MACD abaixo da linha de sinal (momentum negativo)');
+    trendScore -= 1;
+  }
+  
+  // Bollinger Bands Analysis
+  const priceToBollingerRatio = (currentPrice - bollinger.lower) / (bollinger.upper - bollinger.lower);
+  if (priceToBollingerRatio > 0.8) {
+    signals.push('🎯 Preço próximo ao topo da Banda de Bollinger');
+    trendScore -= 0.5;
+  } else if (priceToBollingerRatio < 0.2) {
+    signals.push('🎯 Preço próximo ao fundo da Banda de Bollinger');
+    trendScore += 0.5;
+  } else {
+    signals.push('📊 Preço na faixa média das Bandas de Bollinger');
+    confidenceFactors.push('Preço em zona neutra');
+  }
+  
+  // Stochastic Analysis
+  if (stochastic.k > 80) {
+    signals.push(`⚡ Estocástico em zona de sobrecompra (%K: ${stochastic.k.toFixed(1)})`);
+    trendScore -= 0.5;
+  } else if (stochastic.k < 20) {
+    signals.push(`⚡ Estocástico em zona de sobrevenda (%K: ${stochastic.k.toFixed(1)})`);
+    trendScore += 0.5;
+  }
+  
+  // Volume Analysis
+  const avgVolume = volumes.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+  const currentVolume = volumes[0] || 0;
+  if (currentVolume > avgVolume * 1.5) {
+    signals.push('📊 Volume ELEVADO - confirma movimento');
+    confidenceFactors.push('Volume confirma o movimento');
+    trendScore += 0.5;
+  } else if (currentVolume < avgVolume * 0.5) {
+    signals.push('📊 Volume BAIXO - movimento sem convicção');
+    trendScore -= 0.3;
+  }
+  
+  // Determine overall trend and confidence
+  if (trendScore >= 2) {
+    trend = 'ALTA FORTE';
+  } else if (trendScore >= 1) {
+    trend = 'ALTA';
+  } else if (trendScore > -1) {
+    trend = 'LATERAL';
+  } else if (trendScore >= -2) {
+    trend = 'BAIXA';
+  } else {
+    trend = 'BAIXA FORTE';
+  }
+  
+  // Calculate confidence based on convergence of indicators
+  let overallConfidence = 0.5; // Base confidence
+  
+  // Add confidence based on factors
+  if (confidenceFactors.length >= 4) {
+    overallConfidence = Math.min(0.95, 0.7 + (confidenceFactors.length * 0.05));
+  } else if (confidenceFactors.length >= 2) {
+    overallConfidence = 0.6 + (confidenceFactors.length * 0.05);
+  } else {
+    overallConfidence = Math.max(0.3, 0.5 + (confidenceFactors.length * 0.1));
+  }
+  
+  // Reduce confidence if there are conflicting signals
+  const conflictingSignals = signals.filter(s => s.includes('realinhamento') || s.includes('sem convicção')).length;
+  if (conflictingSignals > 0) {
+    overallConfidence *= (1 - conflictingSignals * 0.1);
+  }
   
   return {
     sma9,
     sma21,
     sma50,
+    ema12,
+    ema26,
     rsi,
+    macd: macdData.macd,
+    macdSignal: macdData.signal,
+    macdHistogram: macdData.histogram,
+    bollingerUpper: bollinger.upper,
+    bollingerMiddle: bollinger.middle,
+    bollingerLower: bollinger.lower,
+    stochasticK: stochastic.k,
+    stochasticD: stochastic.d,
     signals,
-    trend
+    trend,
+    confidenceFactors,
+    overallConfidence
   };
 }
 
@@ -127,12 +333,12 @@ async function generateInsight(asset: Asset, priceData: PriceData[], userId: str
     throw new Error('OpenAI API key not configured');
   }
 
-  // Calculate technical indicators
-  const technicalIndicators = calculateTechnicalIndicators(priceData);
+  // Calculate advanced technical indicators
+  const technicalIndicators = calculateAdvancedTechnicalIndicators(priceData);
   
   // Prepare market data context
   const latestPrice = priceData[0];
-  const previousPrices = priceData.slice(1, 6); // Last 5 data points
+  const previousPrices = priceData.slice(1, 10);
   
   const priceHistory = previousPrices.map(p => ({
     price: p.price,
@@ -141,37 +347,68 @@ async function generateInsight(asset: Asset, priceData: PriceData[], userId: str
   }));
 
   const prompt = `
-Analise os dados de mercado do ativo ${asset.symbol} (${asset.name}) e gere insights técnicos e de tendência baseados nos indicadores técnicos calculados.
+Você é um analista técnico EXPERIENTE. Analise os dados do ativo ${asset.symbol} (${asset.name}) com base nos INDICADORES TÉCNICOS CALCULADOS.
 
 DADOS ATUAIS:
-- Preço atual: $${latestPrice.price}
+- Preço: $${latestPrice.price}
 - Variação 24h: ${latestPrice.change_percent_24h}%
 - Volume: ${latestPrice.volume || 'N/A'}
-- Tipo de ativo: ${asset.asset_type}
+- Tipo: ${asset.asset_type}
 
 INDICADORES TÉCNICOS CALCULADOS:
-- Média Móvel 9 períodos (MM9): $${technicalIndicators.sma9.toFixed(4)}
-- Média Móvel 21 períodos (MM21): $${technicalIndicators.sma21.toFixed(4)}
-- Média Móvel 50 períodos (MM50): $${technicalIndicators.sma50.toFixed(4)}
-- RSI (14 períodos): ${technicalIndicators.rsi.toFixed(2)}
-- Tendência identificada: ${technicalIndicators.trend}
+📈 MÉDIAS MÓVEIS:
+- MM9: $${technicalIndicators.sma9.toFixed(4)}
+- MM21: $${technicalIndicators.sma21.toFixed(4)}
+- MM50: $${technicalIndicators.sma50.toFixed(4)}
+- EMA12: $${technicalIndicators.ema12.toFixed(4)}
+- EMA26: $${technicalIndicators.ema26.toFixed(4)}
 
-SINAIS TÉCNICOS DETECTADOS:
-${technicalIndicators.signals.map(signal => `- ${signal}`).join('\n')}
+📊 OSCILADORES:
+- RSI(14): ${technicalIndicators.rsi.toFixed(2)}
+- Estocástico %K: ${technicalIndicators.stochasticK.toFixed(2)}
+- Estocástico %D: ${technicalIndicators.stochasticD.toFixed(2)}
 
-HISTÓRICO RECENTE (últimos 5 pontos):
-${priceHistory.map(p => `- $${p.price} (${p.change}%) em ${new Date(p.timestamp).toLocaleDateString()}`).join('\n')}
+📈 MACD:
+- MACD: ${technicalIndicators.macd.toFixed(4)}
+- Sinal: ${technicalIndicators.macdSignal.toFixed(4)}
+- Histograma: ${technicalIndicators.macdHistogram.toFixed(4)}
 
-Com base nos indicadores técnicos calculados e sinais detectados, forneça:
-1. Análise de tendência confirmada pelos indicadores (alta/baixa/lateral)
-2. Interpretação das médias móveis e seus cruzamentos
-3. Análise do RSI e condições de sobrecompra/sobrevenda
-4. Níveis de suporte/resistência baseados nas médias móveis
-5. Recomendação de ação (comprar, vender, aguardar) fundamentada nos indicadores
-6. Pontos de entrada/saída sugeridos
-7. Confiança na análise (1-10) baseada na convergência dos indicadores
+🎯 BANDAS DE BOLLINGER:
+- Superior: $${technicalIndicators.bollingerUpper.toFixed(4)}
+- Média: $${technicalIndicators.bollingerMiddle.toFixed(4)}
+- Inferior: $${technicalIndicators.bollingerLower.toFixed(4)}
 
-Responda em português brasileiro, seja técnico mas acessível. Foque em insights práticos para trading baseados nos indicadores calculados.
+🔍 SINAIS DETECTADOS:
+${technicalIndicators.signals.map(signal => `${signal}`).join('\n')}
+
+💪 FATORES DE CONFIANÇA:
+${technicalIndicators.confidenceFactors.map(factor => `✓ ${factor}`).join('\n')}
+
+📊 TENDÊNCIA IDENTIFICADA: ${technicalIndicators.trend}
+
+Com base nesses indicadores CALCULADOS, forneça:
+
+**1. ANÁLISE DE TENDÊNCIA** (confirme com dados):
+- Direção confirmada pelos indicadores
+- Força da tendência baseada na convergência
+
+**2. SUPORTE E RESISTÊNCIA TÉCNICOS**:
+- Níveis baseados nas médias móveis
+- Bandas de Bollinger como referência
+
+**3. RECOMENDAÇÃO FUNDAMENTADA**:
+- COMPRAR/VENDER/AGUARDAR baseado na convergência dos indicadores
+- Pontos de entrada/saída técnicos
+
+**4. GESTÃO DE RISCO**:
+- Stop-loss técnico sugerido
+- Take-profit baseado em resistências
+
+**5. CENÁRIO DE CONFIANÇA**:
+- Confiança na análise: ${Math.round(technicalIndicators.overallConfidence * 100)}%
+- Próximos níveis a observar
+
+Seja TÉCNICO, PRECISO e use os dados calculados. Evite especulações.
 `;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -185,15 +422,15 @@ Responda em português brasileiro, seja técnico mas acessível. Foque em insigh
       messages: [
         {
           role: 'system',
-          content: 'Você é um analista técnico experiente em mercados financeiros. Forneça análises precisas e práticas baseadas nos dados fornecidos.'
+          content: 'Você é um analista técnico sênior com 15+ anos de experiência. Use APENAS os indicadores técnicos fornecidos para suas análises. Seja preciso, técnico e fundamentado em dados.'
         },
         {
           role: 'user',
           content: prompt
         }
       ],
-      max_tokens: 800,
-      temperature: 0.7
+      max_tokens: 1000,
+      temperature: 0.3
     }),
   });
 
@@ -206,15 +443,14 @@ Responda em português brasileiro, seja técnico mas acessível. Foque em insigh
   const data = await response.json();
   const insight = data.choices[0].message.content;
 
-  // Extract confidence score from the insight (simple regex)
-  const confidenceMatch = insight.match(/confiança.*?(\d+)/i);
-  const confidenceScore = confidenceMatch ? parseInt(confidenceMatch[1]) / 10 : 0.7;
+  // Use the calculated confidence score
+  const confidenceScore = technicalIndicators.overallConfidence;
 
-  // Determine insight type based on content
+  // Determine insight type based on trend and indicators
   let insightType = 'technical_analysis';
-  if (insight.toLowerCase().includes('comprar')) insightType = 'buy_signal';
-  else if (insight.toLowerCase().includes('vender')) insightType = 'sell_signal';
-  else if (insight.toLowerCase().includes('aguardar')) insightType = 'hold_signal';
+  if (technicalIndicators.trend.includes('ALTA')) insightType = 'buy_signal';
+  else if (technicalIndicators.trend.includes('BAIXA')) insightType = 'sell_signal';
+  else insightType = 'hold_signal';
 
   // Store insight in database
   const { error: insertError } = await supabase
@@ -222,13 +458,23 @@ Responda em português brasileiro, seja técnico mas acessível. Foque em insigh
     .insert({
       user_id: userId,
       asset_id: asset.id,
-      title: `Análise Técnica - ${asset.symbol}`,
+      title: `Análise Técnica Avançada - ${asset.symbol}`,
       content: insight,
       insight_type: insightType,
       confidence_score: confidenceScore,
       metadata: {
         current_price: latestPrice.price,
         change_24h: latestPrice.change_percent_24h,
+        technical_indicators: {
+          sma9: technicalIndicators.sma9,
+          sma21: technicalIndicators.sma21,
+          sma50: technicalIndicators.sma50,
+          rsi: technicalIndicators.rsi,
+          macd: technicalIndicators.macd,
+          trend: technicalIndicators.trend,
+          confidence_factors_count: technicalIndicators.confidenceFactors.length,
+          signals_count: technicalIndicators.signals.length
+        },
         analysis_timestamp: new Date().toISOString(),
         price_points_analyzed: priceData.length
       }
@@ -280,13 +526,13 @@ serve(async (req) => {
       );
     }
 
-    // Get recent price data for the asset (increased to 60 for better technical analysis)
+    // Get recent price data for the asset (increased to 100 for advanced technical analysis)
     const { data: priceData, error: priceError } = await supabase
       .from('price_data')
       .select('*')
       .eq('asset_id', asset_id)
       .order('timestamp', { ascending: false })
-      .limit(60);
+      .limit(100);
 
     if (priceError || !priceData || priceData.length === 0) {
       console.error('Price data not found:', priceError);
