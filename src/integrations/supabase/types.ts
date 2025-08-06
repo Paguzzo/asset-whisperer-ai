@@ -61,6 +61,42 @@ export type Database = {
           },
         ]
       }
+      alert_logs: {
+        Row: {
+          alert_id: string | null
+          alert_type: string
+          asset_id: string
+          id: string
+          message: string
+          metadata: Json | null
+          sent_at: string
+          user_id: string
+          whatsapp_status: string | null
+        }
+        Insert: {
+          alert_id?: string | null
+          alert_type: string
+          asset_id: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          sent_at?: string
+          user_id: string
+          whatsapp_status?: string | null
+        }
+        Update: {
+          alert_id?: string | null
+          alert_type?: string
+          asset_id?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          sent_at?: string
+          user_id?: string
+          whatsapp_status?: string | null
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           asset_type: string
@@ -146,6 +182,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      price_alerts: {
+        Row: {
+          alert_type: string
+          asset_id: string
+          condition: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_triggered: boolean
+          pre_alert_percentage: number | null
+          target_price: number
+          triggered_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          asset_id: string
+          condition: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_triggered?: boolean
+          pre_alert_percentage?: number | null
+          target_price: number
+          triggered_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          asset_id?: string
+          condition?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_triggered?: boolean
+          pre_alert_percentage?: number | null
+          target_price?: number
+          triggered_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       price_data: {
         Row: {
@@ -244,6 +325,42 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_configs: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_verified: boolean
+          phone_number: string
+          twilio_account_sid: string | null
+          twilio_auth_token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          phone_number: string
+          twilio_account_sid?: string | null
+          twilio_auth_token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          phone_number?: string
+          twilio_account_sid?: string | null
+          twilio_auth_token?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
