@@ -183,6 +183,147 @@ export type Database = {
           },
         ]
       }
+      news_article_assets: {
+        Row: {
+          asset_id: string
+          created_at: string
+          id: string
+          news_article_id: string
+          relevance_score: number | null
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          id?: string
+          news_article_id: string
+          relevance_score?: number | null
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          id?: string
+          news_article_id?: string
+          relevance_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_news_article_assets_asset"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_news_article_assets_news_article"
+            columns: ["news_article_id"]
+            isOneToOne: false
+            referencedRelation: "news_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_articles: {
+        Row: {
+          author: string | null
+          content: string | null
+          created_at: string
+          description: string | null
+          entities: string[] | null
+          id: string
+          impact_score: number | null
+          published_at: string | null
+          raw_data: Json | null
+          sentiment_score: number | null
+          snippet: string | null
+          source: string
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          author?: string | null
+          content?: string | null
+          created_at?: string
+          description?: string | null
+          entities?: string[] | null
+          id?: string
+          impact_score?: number | null
+          published_at?: string | null
+          raw_data?: Json | null
+          sentiment_score?: number | null
+          snippet?: string | null
+          source: string
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          author?: string | null
+          content?: string | null
+          created_at?: string
+          description?: string | null
+          entities?: string[] | null
+          id?: string
+          impact_score?: number | null
+          published_at?: string | null
+          raw_data?: Json | null
+          sentiment_score?: number | null
+          snippet?: string | null
+          source?: string
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      news_summaries: {
+        Row: {
+          articles_count: number
+          confidence_score: number | null
+          content: string
+          created_at: string
+          id: string
+          key_events: string[] | null
+          market_impact_analysis: string | null
+          raw_articles: Json | null
+          sentiment_overview: string | null
+          summary_type: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          articles_count?: number
+          confidence_score?: number | null
+          content: string
+          created_at?: string
+          id?: string
+          key_events?: string[] | null
+          market_impact_analysis?: string | null
+          raw_articles?: Json | null
+          sentiment_overview?: string | null
+          summary_type: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          articles_count?: number
+          confidence_score?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          key_events?: string[] | null
+          market_impact_analysis?: string | null
+          raw_articles?: Json | null
+          sentiment_overview?: string | null
+          summary_type?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       price_alerts: {
         Row: {
           alert_type: string
@@ -305,6 +446,60 @@ export type Database = {
           name?: string | null
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      social_sentiment: {
+        Row: {
+          alt_rank: number | null
+          asset_id: string
+          created_at: string
+          galaxy_score: number | null
+          id: string
+          market_cap_rank: number | null
+          raw_data: Json | null
+          sentiment_absolute: number | null
+          sentiment_score: number | null
+          social_contributors: number | null
+          social_dominance: number | null
+          social_volume: number | null
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alt_rank?: number | null
+          asset_id: string
+          created_at?: string
+          galaxy_score?: number | null
+          id?: string
+          market_cap_rank?: number | null
+          raw_data?: Json | null
+          sentiment_absolute?: number | null
+          sentiment_score?: number | null
+          social_contributors?: number | null
+          social_dominance?: number | null
+          social_volume?: number | null
+          source: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alt_rank?: number | null
+          asset_id?: string
+          created_at?: string
+          galaxy_score?: number | null
+          id?: string
+          market_cap_rank?: number | null
+          raw_data?: Json | null
+          sentiment_absolute?: number | null
+          sentiment_score?: number | null
+          social_contributors?: number | null
+          social_dominance?: number | null
+          social_volume?: number | null
+          source?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
