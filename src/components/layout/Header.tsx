@@ -1,7 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LogOut, TrendingUp } from 'lucide-react';
+import { LogOut, TrendingUp, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -25,6 +26,12 @@ const Header = () => {
               {user?.user_metadata?.name || user?.email}
             </span>
           </div>
+          
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/settings">
+              <Settings className="h-4 w-4" />
+            </Link>
+          </Button>
           
           <Button variant="ghost" size="sm" onClick={signOut}>
             <LogOut className="h-4 w-4" />
